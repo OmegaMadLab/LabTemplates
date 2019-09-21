@@ -5,11 +5,17 @@
         "envPrefix": {
             "type": "string",
             "metadata": {      
-                "description": "Prefix for items naming convention"
+                "description": "Prefix used in naming convention for items"
+            }
+        },
+        "vmName": {
+            "type": "string",
+            "metadata": {      
+                "description": "Name of the VM, will be combined with envPrefix"
             }
         },
         "genericVmSize": {
-            "defaultValue": "standard_F2",
+            "defaultValue": "standard_B2s",
             "type": "string",
             "metadata": {      
                 "description": "VM size"
@@ -54,7 +60,7 @@
     },
     "variables": {
         "diagStorageName": "[take(concat(toLower(parameters('envPrefix')),'diagsa',uniqueString(resourceGroup().id)),24)]",
-        "vmName": "[concat(parameters('envPrefix'),'-VM')]",
+        "vmName": "[concat(parameters('envPrefix'),'-',parameters('vmName'))]",
         "adJoinModulesURL": "https://raw.githubusercontent.com/OmegaMadLab/StartingWithArmTemplates/master/05_DSC_example/DSCResources/ADDomainJoin.ps1.zip",
         "adJoinConfigurationFunction": "ADDomainJoin.ps1\\ADDomainJoin"
     },
