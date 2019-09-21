@@ -47,12 +47,14 @@
         },
         "subnetName": {
             "type": "string",
+            "defaultValue": "default",
             "metadata": {
                 "description": "Name of an existing subnet"
             }
         },
         "vnetResourceGroup": {
             "type": "string",
+            "defaultValue": "[resourceGroup().name]",
             "metadata": {
                 "description": "Name of the resource group which contains the existing vnet"
             }
