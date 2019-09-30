@@ -63,8 +63,8 @@
     "variables": {
         "diagStorageName": "[take(concat(toLower(parameters('envPrefix')),'diagsa',uniqueString(resourceGroup().id)),24)]",
         "vmName": "[concat(parameters('envPrefix'),'-',parameters('vmName'))]",
-        "adJoinModulesURL": "https://raw.githubusercontent.com/OmegaMadLab/StartingWithArmTemplates/master/05_DSC_example/DSCResources/ADDomainJoin.ps1.zip",
-        "adJoinConfigurationFunction": "ADDomainJoin.ps1\\ADDomainJoin"
+        "adJoinModulesURL": "https://raw.githubusercontent.com/OmegaMadLab/StartingWithArmTemplates/master/05_DSC_example/DSCResources/ADDomainJoin-SQL.ps1.zip",
+        "adJoinConfigurationFunction": "ADDomainJoin-SQL.ps1\\ADDomainJoin"
     },
     "resources": [
         {
@@ -92,7 +92,7 @@
                         "managedDisk": {
                             "storageAccountType": "StandardSSD_LRS"
                         },
-                        "diskSizeGB": 64
+                        "diskSizeGB": 127
                     },
                     "dataDisks": []
                 },
