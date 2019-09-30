@@ -27,16 +27,21 @@
                 "description": "Local and domain admin username"
             }
         },
-        "adminPassword": {
-            "type": "securestring",
-            "metadata": {      
-                "description": "Local and domain admin password"
+        "authenticationType": {
+            "type": "string",
+            "defaultValue": "sshPublicKey",
+            "allowedValues": [
+              "sshPublicKey",
+              "password"
+            ],
+            "metadata": {
+              "description": "Type of authentication to use on the Virtual Machine. SSH key is recommended."
             }
         },
-        "domainName": {
-            "type": "string",
+            "adminPasswordOrKey": {
+            "type": "securestring",
             "metadata": {
-                "description": "AD domain name"
+                "description": "SSH Key or password for the Virtual Machine. SSH key is recommended."
             }
         },
         "vnetName": {
@@ -63,14 +68,23 @@
     "variables": {
         "diagStorageName": "[take(concat(toLower(parameters('envPrefix')),'diagsa',uniqueString(resourceGroup().id)),24)]",
         "vmName": "[concat(parameters('envPrefix'),'-',parameters('vmName'))]",
-        "adJoinModulesURL": "https://raw.githubusercontent.com/OmegaMadLab/LabTemplates/master/DSCResources/ADDomainJoin.ps1.zip",
-        "adJoinConfigurationFunction": "ADDomainJoin.ps1\\ADDomainJoin"
+        "linuxConfiguration": {
+            "disablePasswordAuthentication": true,
+            "ssh": {
+              "publicKeys": [
+                {
+                  "path": "[concat('/home/', parameters('adminUsername'), '/.ssh/authorized_keys')]",
+                  "keyData": "[parameters('adminPasswordOrKey')]"
+                }
+              ]
+            }
+        }
     },
     "resources": [
         {
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('vmName')]",
-            "apiVersion": "2018-04-01",
+            "apiVersion": "2019-03-01",
             "location": "[resourceGroup().location]",
             "properties": {
         
@@ -79,13 +93,13 @@
                 },
                 "storageProfile": {
                     "imageReference": {
-                        "publisher": "MicrosoftWindowsServer",
-                        "offer": "WindowsServer",
-                        "sku": "2016-Datacenter-smalldisk",
+                        "publisher": "Canonical",
+                        "offer": "UbuntuServer",
+                        "sku": "16.04.0-LTS",
                         "version": "latest"
                     },
                     "osDisk": {
-                        "osType": "Windows",
+                        "osType": "Linux",
                         "name": "[concat(variables('vmName'),'-OsDisk')]",
                         "createOption": "FromImage",
                         "caching": "ReadWrite",
@@ -99,11 +113,8 @@
                 "osProfile": {
                     "computerName": "[variables('vmName')]",
                     "adminUsername": "[parameters('adminUserName')]",
-                    "adminPassword": "[parameters('adminPassword')]",
-                    "windowsConfiguration": {
-                        "provisionVMAgent": true,
-                        "enableAutomaticUpdates": true
-                    },
+                    "adminPassword": "[parameters('adminPasswordOrKey')]",
+                    "linuxConfiguration": "[if(equals(parameters('authenticationType'), 'password'), json('null'), variables('linuxConfiguration'))]",
                     "secrets": []
                 },
                 "networkProfile": {
@@ -120,40 +131,7 @@
                     }
                 }
             },
-            "resources": [
-                {
-                    "type": "extensions",
-                    "name": "DomainJoin",
-                    "apiVersion": "2017-12-01",
-                    "location": "[resourceGroup().location]",
-                    "dependsOn": [
-                        "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]"
-                    ],
-                    "properties": {
-                
-                        "publisher": "Microsoft.Powershell",
-                        "type": "DSC",
-                        "typeHandlerVersion": "2.76",
-                        "autoUpgradeMinorVersion": false,
-                        "settings": {
-                            "modulesURL": "[variables('adJoinModulesURL')]",
-                            "configurationFunction": "[variables('adJoinConfigurationFunction')]",
-                            "properties": {
-                                "domainName": "[parameters('domainName')]",
-                                "adminCreds": {
-                                    "userName": "[parameters('adminUserName')]",
-                                    "password": "PrivateSettingsRef:adminPassword"
-                                }
-                            }
-                        },
-                        "protectedSettings": {
-                            "items": {
-                                "adminPassword": "[parameters('adminPassword')]"
-                            }
-                        }
-                    }
-                }
-            ],
+            "resources": [],
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('vmName'),'-NIC'))]",
                 "[resourceId('Microsoft.Storage/storageAccounts', variables('diagStorageName'))]"

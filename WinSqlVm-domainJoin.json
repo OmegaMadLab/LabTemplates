@@ -63,7 +63,7 @@
     "variables": {
         "diagStorageName": "[take(concat(toLower(parameters('envPrefix')),'diagsa',uniqueString(resourceGroup().id)),24)]",
         "vmName": "[concat(parameters('envPrefix'),'-',parameters('vmName'))]",
-        "adJoinModulesURL": "https://raw.githubusercontent.com/OmegaMadLab/StartingWithArmTemplates/master/05_DSC_example/DSCResources/ADDomainJoin-SQL.ps1.zip",
+        "adJoinModulesURL": "https://raw.githubusercontent.com/OmegaMadLab/LabTemplates/master/DSCResources/ADDomainJoin-SQL.ps1.zip",
         "adJoinConfigurationFunction": "ADDomainJoin-SQL.ps1\\ADDomainJoin"
     },
     "resources": [
