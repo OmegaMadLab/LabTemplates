@@ -28,7 +28,7 @@ function Get-TargetResource
         $ServerName = $env:COMPUTERNAME
     )
 
-    $sqlServerObject = Connect-SQL -ServerName $ServerName -InstanceName $InstanceName
+    $sqlServerObject = Connect-SQL -SQLServer $ServerName -SQLInstanceName $InstanceName
 
     # Is this node actively hosting the SQL instance?
     $isActiveNode = Test-ActiveNode -ServerObject $sqlServerObject
@@ -108,7 +108,7 @@ function Set-TargetResource
         $ProcessOnlyOnActiveNode
     )
 
-    $sqlServerObject = Connect-SQL -ServerName $ServerName -InstanceName $InstanceName
+    $sqlServerObject = Connect-SQL -SQLServer $ServerName -SQLInstanceName $InstanceName
 
     if ($sqlServerObject)
     {

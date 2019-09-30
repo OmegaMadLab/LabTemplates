@@ -12,7 +12,7 @@ $script:localizedData = Get-LocalizedData -ResourceName 'MSFT_SqlSetup'
 
     .PARAMETER Action
         The action to be performed. Default value is 'Install'.
-        Possible values are 'Install', 'InstallFailoverCluster', 'AddNode', 'PrepareFailoverCluster', and 'CompleteFailoverCluster'.
+        Possible values are 'Install', 'InstallFailoverCluster', 'AddNode', 'PrepareFailoverCluster', and 'CompleteFailoverCluster'
 
     .PARAMETER SourcePath
         The path to the root of the source files for installation. I.e and UNC path to a shared resource.  Environment variables can be used in the path.
@@ -30,7 +30,7 @@ $script:localizedData = Get-LocalizedData -ResourceName 'MSFT_SqlSetup'
         Name of the SQL instance to be installed.
 
     .PARAMETER FailoverClusterNetworkName
-        Host name to be assigned to the clustered SQL Server instance.
+        Host name to be assigned to the clustered SQL Server instance
 #>
 function Get-TargetResource
 {
@@ -126,14 +126,8 @@ function Get-TargetResource
 
         $features += 'SQLENGINE,'
 
-        $sqlServiceCimInstance = (Get-CimInstance -ClassName Win32_Service -Filter "Name = '$databaseServiceName'")
-        $agentServiceCimInstance = (Get-CimInstance -ClassName Win32_Service -Filter "Name = '$agentServiceName'")
-
-        $sqlServiceAccountUsername = $sqlServiceCimInstance.StartName
-        $agentServiceAccountUsername = $agentServiceCimInstance.StartName
-
-        $SqlSvcStartupType = ConvertTo-StartupType -StartMode $sqlServiceCimInstance.StartMode
-        $AgtSvcStartupType = ConvertTo-StartupType -StartMode $agentServiceCimInstance.StartMode
+        $sqlServiceAccountUsername = (Get-CimInstance -ClassName Win32_Service -Filter "Name = '$databaseServiceName'").StartName
+        $agentServiceAccountUsername = (Get-CimInstance -ClassName Win32_Service -Filter "Name = '$agentServiceName'").StartName
 
         $fullInstanceId = (Get-ItemProperty -Path 'HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\Instance Names\SQL' -Name $InstanceName).$InstanceName
 
@@ -188,30 +182,7 @@ function Get-TargetResource
         $instanceId = $fullInstanceId.Split('.')[1]
         $instanceDirectory = (Get-ItemProperty -Path "HKLM:\SOFTWARE\Microsoft\Microsoft SQL Server\$fullInstanceId\Setup" -Name 'SqlProgramDir').SqlProgramDir.Trim("\")
 
-        $databaseServer = Connect-SQL -ServerName $sqlHostName -InstanceName $InstanceName
-
-        # Retrieve Tempdb database files information
-        if ($sqlVersion -ge 13)
-        {
-            # Tempdb data files count
-            $tempdbPrimaryFilegroup = ($databaseServer.Databases | Where-Object {$_.Name -eq 'tempdb'}).FileGroups | Where-Object {$_.Name -eq 'PRIMARY'}
-            $SqlTempdbFileCount = $tempdbPrimaryFilegroup.Files.Count
-
-            # Tempdb data files size
-            $SqlTempdbFileSize = ($tempdbPrimaryFilegroup.Files.Size | Measure-Object -Average).Average / 1Kb
-            
-            # Tempdb data files growth
-            $SqlTempdbFileGrowth = ($tempdbPrimaryFilegroup.Files.Growth | Measure-Object -Average).Average / 1Kb
-            
-            # Tempdb log file size
-            $tempdbTempLog = ($databaseServer.Databases | Where-Object {$_.Name -eq 'tempdb'}).LogFiles | Where-Object {$_.Name -eq 'templog'}
-            $SqlTempdbLogFileSize = $tempdbTempLog.Size / 1Kb
-            
-            # Tempdb log file growth
-            $SqlTempdbLogFileGrowth = $tempdbTempLog.Growth / 1Kb
-        }
-
-
+        $databaseServer = Connect-SQL -SQLServer $sqlHostName -SQLInstanceName $InstanceName
 
         $sqlCollation = $databaseServer.Collation
 
@@ -298,9 +269,7 @@ function Get-TargetResource
         Write-Verbose -Message $script:localizedData.ReportingServicesFeatureFound
 
         $features += 'RS,'
-        $reportingServiceCimInstance = (Get-CimInstance -ClassName Win32_Service -Filter "Name = '$reportServiceName'")
-        $reportingServiceAccountUsername = $reportingServiceCimInstance.StartName
-        $RsSvcStartupType = ConvertTo-StartupType -StartMode $reportingServiceCimInstance.StartMode
+        $reportingServiceAccountUsername = (Get-CimInstance -ClassName Win32_Service -Filter "Name = '$reportServiceName'").StartName
     }
     else
     {
@@ -314,9 +283,7 @@ function Get-TargetResource
         Write-Verbose -Message $script:localizedData.AnalysisServicesFeatureFound
 
         $features += 'AS,'
-        $analysisServiceCimInstance = (Get-CimInstance -ClassName Win32_Service -Filter "Name = '$analysisServiceName'")
-        $analysisServiceAccountUsername = $analysisServiceCimInstance.StartName
-        $AsSvcStartupType = ConvertTo-StartupType -StartMode $analysisServiceCimInstance.StartMode
+        $analysisServiceAccountUsername = (Get-CimInstance -ClassName Win32_Service -Filter "Name = '$analysisServiceName'").StartName
 
         $analysisServer = Connect-SQLAnalysis -SQLServer $sqlHostName -SQLInstanceName $InstanceName
 
@@ -353,9 +320,7 @@ function Get-TargetResource
         Write-Verbose -Message $script:localizedData.IntegrationServicesFeatureFound
 
         $features += 'IS,'
-        $integrationServiceCimInstance = (Get-CimInstance -ClassName Win32_Service -Filter "Name = '$integrationServiceName'")
-        $integrationServiceAccountUsername = $integrationServiceCimInstance.StartName
-        $IsSvcStartupType = ConvertTo-StartupType -StartMode $integrationServiceCimInstance.StartMode
+        $integrationServiceAccountUsername = (Get-CimInstance -ClassName Win32_Service -Filter "Name = '$integrationServiceName'").StartName
     }
     else
     {
@@ -513,9 +478,7 @@ function Get-TargetResource
         InstallSharedWOWDir = $installSharedWOWDir
         InstanceDir = $instanceDirectory
         SQLSvcAccountUsername = $sqlServiceAccountUsername
-        SqlSvcStartupType = $SqlSvcStartupType
         AgtSvcAccountUsername = $agentServiceAccountUsername
-        AgtSvcStartupType = $AgtSvcStartupType
         SQLCollation = $sqlCollation
         SQLSysAdminAccounts = $sqlSystemAdminAccounts
         SecurityMode = $securityMode
@@ -524,17 +487,10 @@ function Get-TargetResource
         SQLUserDBLogDir = $sqlUserDatabaseLogDirectory
         SQLTempDBDir = $null
         SQLTempDBLogDir = $null
-        SqlTempdbFileCount = $SqlTempdbFileCount
-        SqlTempdbFileSize = $SqlTempdbFileSize
-        SqlTempdbFileGrowth = $SqlTempdbFileGrowth
-        SqlTempdbLogFileSize = $SqlTempdbLogFileSize
-        SqlTempdbLogFileGrowth = $SqlTempdbLogFileGrowth
         SQLBackupDir = $sqlBackupDirectory
         FTSvcAccountUsername = $fullTextServiceAccountUsername
         RSSvcAccountUsername = $reportingServiceAccountUsername
-        RsSvcStartupType = $RsSvcStartupType
         ASSvcAccountUsername = $analysisServiceAccountUsername
-        AsSvcStartupType = $AsSvcStartupType
         ASCollation = $analysisCollation
         ASSysAdminAccounts = $analysisSystemAdminAccounts
         ASDataDir = $analysisDataDirectory
@@ -544,7 +500,6 @@ function Get-TargetResource
         ASConfigDir = $analysisConfigDirectory
         ASServerMode = $analysisServerMode
         ISSvcAccountUsername = $integrationServiceAccountUsername
-        IsSvcStartupType = $IsSvcStartupType
         FailoverClusterGroupName = $clusteredSqlGroupName
         FailoverClusterNetworkName = $clusteredSqlHostname
         FailoverClusterIPAddress = $clusteredSqlIPAddress
@@ -557,7 +512,7 @@ function Get-TargetResource
 
     .PARAMETER Action
         The action to be performed. Default value is 'Install'.
-        Possible values are 'Install', 'InstallFailoverCluster', 'AddNode', 'PrepareFailoverCluster', and 'CompleteFailoverCluster'.
+        Possible values are 'Install', 'InstallFailoverCluster', 'AddNode', 'PrepareFailoverCluster', and 'CompleteFailoverCluster'
 
     .PARAMETER SourcePath
         The path to the root of the source files for installation. I.e and UNC path to a shared resource. Environment variables can be used in the path.
@@ -623,10 +578,7 @@ function Get-TargetResource
         Array of accounts to be made SQL administrators.
 
     .PARAMETER SecurityMode
-        Security mode to apply to the
-        SQL Server instance. 'SQL' indicates mixed-mode authentication while
-        'Windows' indicates Windows authentication.
-        Default is Windows. { *Windows* | SQL }
+        Security mode to apply to the SQL Server instance.
 
     .PARAMETER SAPwd
         SA password, if SecurityMode is set to 'SQL'.
@@ -689,47 +641,17 @@ function Get-TargetResource
     .PARAMETER ISSvcAccount
        Service account for Integration Services service.
 
-    .PARAMETER SqlSvcStartupType
-       Specifies the startup mode for SQL Server Engine service.
-
-    .PARAMETER AgtSvcStartupType
-       Specifies the startup mode for SQL Server Agent service.
-
-    .PARAMETER AsSvcStartupType
-       Specifies the startup mode for SQL Server Analysis service.
-
-    .PARAMETER IsSvcStartupType
-       Specifies the startup mode for SQL Server Integration service.
-
-    .PARAMETER RsSvcStartupType
-       Specifies the startup mode for SQL Server Report service.
-
     .PARAMETER BrowserSvcStartupType
-       Specifies the startup mode for SQL Server Browser service.
+       Specifies the startup mode for SQL Server Browser service
 
     .PARAMETER FailoverClusterGroupName
         The name of the resource group to create for the clustered SQL Server instance. Default is 'SQL Server (InstanceName)'.
 
     .PARAMETER FailoverClusterIPAddress
-        Array of IP Addresses to be assigned to the clustered SQL Server instance.
+        Array of IP Addresses to be assigned to the clustered SQL Server instance
 
     .PARAMETER FailoverClusterNetworkName
-        Host name to be assigned to the clustered SQL Server instance.
-
-    .PARAMETER SqlTempdbFileCount
-        Specifies the number of tempdb data files to be added by setup.
-
-    .PARAMETER SqlTempdbFileSize
-        Specifies the initial size of each tempdb data file in MB.
-
-    .PARAMETER SqlTempdbFileGrowth
-        Specifies the file growth increment of each tempdb data file in MB.
-
-    .PARAMETER SqlTempdbLogFileSize
-        Specifies the initial size of each tempdb log file in MB.
-
-    .PARAMETER SqlTempdbLogFileGrowth
-        Specifies the file growth increment of each tempdb data file in MB.
+        Host name to be assigned to the clustered SQL Server instance
 
     .PARAMETER SetupProcessTimeout
         The timeout, in seconds, to wait for the setup process to finish. Default value is 7200 seconds (2 hours). If the setup process does not finish before this time, and error will be thrown.
@@ -831,7 +753,6 @@ function Set-TargetResource
         $SQLSysAdminAccounts,
 
         [Parameter()]
-        [ValidateSet('SQL', 'Windows')]
         [System.String]
         $SecurityMode,
 
@@ -915,31 +836,6 @@ function Set-TargetResource
         [Parameter()]
         [System.String]
         [ValidateSet('Automatic', 'Disabled', 'Manual')]
-        $SqlSvcStartupType,
-
-        [Parameter()]
-        [System.String]
-        [ValidateSet('Automatic', 'Disabled', 'Manual')]
-        $AgtSvcStartupType,
-
-        [Parameter()]
-        [System.String]
-        [ValidateSet('Automatic', 'Disabled', 'Manual')]
-        $IsSvcStartupType,
-
-        [Parameter()]
-        [System.String]
-        [ValidateSet('Automatic', 'Disabled', 'Manual')]
-        $AsSvcStartupType,
-
-        [Parameter()]
-        [System.String]
-        [ValidateSet('Automatic', 'Disabled', 'Manual')]
-        $RsSvcStartupType,
-
-        [Parameter()]
-        [System.String]
-        [ValidateSet('Automatic', 'Disabled', 'Manual')]
         $BrowserSvcStartupType,
 
         [Parameter()]
@@ -953,26 +849,6 @@ function Set-TargetResource
         [Parameter()]
         [System.String]
         $FailoverClusterNetworkName,
-
-        [Parameter()]
-        [System.UInt32]
-        $SqlTempdbFileCount,
-
-        [Parameter()]
-        [System.UInt32]
-        $SqlTempdbFileSize,
-
-        [Parameter()]
-        [System.UInt32]
-        $SqlTempdbFileGrowth,
-
-        [Parameter()]
-        [System.UInt32]
-        $SqlTempdbLogFileSize,
-
-        [Parameter()]
-        [System.UInt32]
-        $SqlTempdbLogFileGrowth,
 
         [Parameter()]
         [System.UInt32]
@@ -1321,6 +1197,7 @@ function Set-TargetResource
 
     if ($Features.Contains('SQLENGINE'))
     {
+
         if ($PSBoundParameters.ContainsKey('SQLSvcAccount'))
         {
             $setupArguments += (Get-ServiceAccountParameters -ServiceAccount $SQLSvcAccount -ServiceType 'SQL')
@@ -1365,52 +1242,10 @@ function Set-TargetResource
                 'SQLBackupDir'
             )
         }
-        
-        # tempdb : define SqlTempdbFileCount
-        if($PSBoundParameters.ContainsKey('SqlTempdbFileCount'))
-        {
-            $setupArguments += @{ SqlTempdbFileCount = $SqlTempdbFileCount }
-        }
-        
-        # tempdb : define SqlTempdbFileSize
-        if($PSBoundParameters.ContainsKey('SqlTempdbFileSize'))
-        {
-            $setupArguments += @{ SqlTempdbFileSize = $SqlTempdbFileSize }
-        }
-        
-        # tempdb : define SqlTempdbFileGrowth
-        if($PSBoundParameters.ContainsKey('SqlTempdbFileGrowth'))
-        {
-            $setupArguments += @{ SqlTempdbFileGrowth = $SqlTempdbFileGrowth }
-        }
-        
-        # tempdb : define SqlTempdbLogFileSize
-        if($PSBoundParameters.ContainsKey('SqlTempdbLogFileSize'))
-        {
-            $setupArguments += @{ SqlTempdbLogFileSize = $SqlTempdbLogFileSize }
-        }
-        
-        # tempdb : define SqlTempdbLogFileGrowth
-        if($PSBoundParameters.ContainsKey('SqlTempdbLogFileGrowth'))
-        {
-            $setupArguments += @{ SqlTempdbLogFileGrowth = $SqlTempdbLogFileGrowth }
-        }
 
         if ($Action -in @('Install'))
         {
-            if ($PSBoundParameters.ContainsKey('AgtSvcStartupType'))
-            {
-                $setupArguments.AgtSvcStartupType = $AgtSvcStartupType
-            }
-            else
-            {
-                $setupArguments += @{ AgtSvcStartupType = 'Automatic' }
-            }
-
-            if ($PSBoundParameters.ContainsKey('SqlSvcStartupType'))
-            {
-                $setupArguments += @{ SqlSvcStartupType = $SqlSvcStartupType}
-            }
+            $setupArguments += @{ AgtSvcStartupType = 'Automatic' }
         }
     }
 
@@ -1427,10 +1262,6 @@ function Set-TargetResource
         if ($PSBoundParameters.ContainsKey('RSSvcAccount'))
         {
             $setupArguments += (Get-ServiceAccountParameters -ServiceAccount $RSSvcAccount -ServiceType 'RS')
-        }
-        if ($PSBoundParameters.ContainsKey('RsSvcStartupType'))
-        {
-            $setupArguments += @{ RsSvcStartupType = $RsSvcStartupType}
         }
     }
 
@@ -1473,11 +1304,6 @@ function Set-TargetResource
                 $setupArguments['ASSysAdminAccounts'] += $ASSysAdminAccounts
             }
         }
-
-        if ($PSBoundParameters.ContainsKey('AsSvcStartupType'))
-        {
-            $setupArguments += @{ AsSvcStartupType = $AsSvcStartupType}
-        }
     }
 
     if ($Features.Contains('IS'))
@@ -1485,11 +1311,6 @@ function Set-TargetResource
         if ($PSBoundParameters.ContainsKey('ISSvcAccount'))
         {
             $setupArguments += (Get-ServiceAccountParameters -ServiceAccount $ISSvcAccount -ServiceType 'IS')
-        }
-
-        if ($PSBoundParameters.ContainsKey('IsSvcStartupType'))
-        {
-            $setupArguments += @{ IsSvcStartupType = $IsSvcStartupType}
         }
     }
 
@@ -1596,9 +1417,8 @@ function Set-TargetResource
         elseif ($processExitCode -ne 0)
         {
             $setupExitMessageError = ('{0} {1}' -f $setupExitMessage, ($script:localizedData.SetupFailed))
-            Write-Warning $setupExitMessageError
 
-            $setupEndedInError = $true
+            Write-Warning $setupExitMessageError
         }
         else
         {
@@ -1613,34 +1433,12 @@ function Set-TargetResource
             {
                 Write-Verbose -Message $script:localizedData.Reboot
 
-                # Rebooting, so no point in refreshing the session.
-                $forceReloadPowerShellModule = $false
-
                 $global:DSCMachineStatus = 1
             }
             else
             {
                 Write-Verbose -Message $script:localizedData.SuppressReboot
-                $forceReloadPowerShellModule = $true
             }
-        }
-        else
-        {
-            $forceReloadPowerShellModule = $true
-        }
-
-        if ((-not $setupEndedInError) -and $forceReloadPowerShellModule)
-        {
-            <#
-                Force reload of SQLPS module in case a newer version of
-                SQL Server was installed that contains a newer version
-                of the SQLPS module, although if SqlServer module exist
-                on the target node, that will be used regardless.
-                This is to make sure we use the latest SQLPS module that
-                matches the latest assemblies in GAC, mitigating for example
-                issue #1151.
-            #>
-            Import-SQLPSModule -Force
         }
 
         if (-not (Test-TargetResource @PSBoundParameters))
@@ -1661,7 +1459,7 @@ function Set-TargetResource
 
     .PARAMETER Action
         The action to be performed. Default value is 'Install'.
-        Possible values are 'Install', 'InstallFailoverCluster', 'AddNode', 'PrepareFailoverCluster', and 'CompleteFailoverCluster'.
+        Possible values are 'Install', 'InstallFailoverCluster', 'AddNode', 'PrepareFailoverCluster', and 'CompleteFailoverCluster'
 
     .PARAMETER SourcePath
         The path to the root of the source files for installation. I.e and UNC path to a shared resource. Environment variables can be used in the path.
@@ -1727,10 +1525,7 @@ function Set-TargetResource
         Array of accounts to be made SQL administrators.
 
     .PARAMETER SecurityMode
-        Security mode to apply to the
-        SQL Server instance. 'SQL' indicates mixed-mode authentication while
-        'Windows' indicates Windows authentication.
-        Default is Windows. { *Windows* | SQL }
+        Security mode to apply to the SQL Server instance.
 
     .PARAMETER SAPwd
         SA password, if SecurityMode is set to 'SQL'.
@@ -1793,47 +1588,17 @@ function Set-TargetResource
     .PARAMETER ISSvcAccount
        Service account for Integration Services service.
 
-    .PARAMETER SqlSvcStartupType
-       Specifies the startup mode for SQL Server Engine service.
-
-    .PARAMETER AgtSvcStartupType
-       Specifies the startup mode for SQL Server Agent service.
-
-    .PARAMETER IsSvcStartupType
-       Specifies the startup mode for SQL Server Integration service.
-
-    .PARAMETER AsSvcStartupType
-       Specifies the startup mode for SQL Server Analysis service.
-
-    .PARAMETER RsSvcStartupType
-       Specifies the startup mode for SQL Server Report service.
-
     .PARAMETER BrowserSvcStartupType
-       Specifies the startup mode for SQL Server Browser service.
+       Specifies the startup mode for SQL Server Browser service
 
     .PARAMETER FailoverClusterGroupName
         The name of the resource group to create for the clustered SQL Server instance. Default is 'SQL Server (InstanceName)'.
 
     .PARAMETER FailoverClusterIPAddress
-        Array of IP Addresses to be assigned to the clustered SQL Server instance.
+        Array of IP Addresses to be assigned to the clustered SQL Server instance
 
     .PARAMETER FailoverClusterNetworkName
-        Host name to be assigned to the clustered SQL Server instance.
-
-    .PARAMETER SqlTempdbFileCount
-        Specifies the number of tempdb data files to be added by setup.
-
-    .PARAMETER SqlTempdbFileSize
-        Specifies the initial size of each tempdb data file in MB.
-
-    .PARAMETER SqlTempdbFileGrowth
-        Specifies the file growth increment of each tempdb data file in MB.
-
-    .PARAMETER SqlTempdbLogFileSize
-        Specifies the initial size of each tempdb log file in MB.
-
-    .PARAMETER SqlTempdbLogFileGrowth
-        Specifies the file growth increment of each tempdb data file in MB.
+        Host name to be assigned to the clustered SQL Server instance
 
     .PARAMETER SetupProcessTimeout
         The timeout, in seconds, to wait for the setup process to finish. Default value is 7200 seconds (2 hours). If the setup process does not finish before this time, and error will be thrown.
@@ -1926,7 +1691,6 @@ function Test-TargetResource
         $SQLSysAdminAccounts,
 
         [Parameter()]
-        [ValidateSet('SQL', 'Windows')]
         [System.String]
         $SecurityMode,
 
@@ -2010,31 +1774,6 @@ function Test-TargetResource
         [Parameter()]
         [System.String]
         [ValidateSet('Automatic', 'Disabled', 'Manual')]
-        $SqlSvcStartupType,
-
-        [Parameter()]
-        [System.String]
-        [ValidateSet('Automatic', 'Disabled', 'Manual')]
-        $AgtSvcStartupType,
-
-        [Parameter()]
-        [System.String]
-        [ValidateSet('Automatic', 'Disabled', 'Manual')]
-        $IsSvcStartupType,
-
-        [Parameter()]
-        [System.String]
-        [ValidateSet('Automatic', 'Disabled', 'Manual')]
-        $AsSvcStartupType,
-
-        [Parameter()]
-        [System.String]
-        [ValidateSet('Automatic', 'Disabled', 'Manual')]
-        $RsSvcStartupType,
-
-        [Parameter()]
-        [System.String]
-        [ValidateSet('Automatic', 'Disabled', 'Manual')]
         $BrowserSvcStartupType,
 
         [Parameter(ParameterSetName = 'ClusterInstall')]
@@ -2048,26 +1787,6 @@ function Test-TargetResource
         [Parameter(ParameterSetName = 'ClusterInstall')]
         [System.String]
         $FailoverClusterNetworkName,
-
-        [Parameter()]
-        [System.UInt32]
-        $SqlTempdbFileCount,
-
-        [Parameter()]
-        [System.UInt32]
-        $SqlTempdbFileSize,
-
-        [Parameter()]
-        [System.UInt32]
-        $SqlTempdbFileGrowth,
-
-        [Parameter()]
-        [System.UInt32]
-        $SqlTempdbLogFileSize,
-
-        [Parameter()]
-        [System.UInt32]
-        $SqlTempdbLogFileGrowth,
 
         [Parameter()]
         [System.UInt32]
@@ -2115,8 +1834,7 @@ function Test-TargetResource
         $boundParameters.Keys | Where-Object {$_ -imatch "^FailoverCluster"} | ForEach-Object {
             $variableName = $_
 
-            if ($getTargetResourceResult.$variableName -ne $boundParameters[$variableName])
-            {
+            if ($getTargetResourceResult.$variableName -ne $boundParameters[$variableName]) {
                 Write-Verbose -Message ($script:localizedData.ClusterParameterIsNotInDesiredState -f $variableName, $($boundParameters[$variableName]))
                 $result = $false
             }
@@ -2201,8 +1919,7 @@ function Copy-ItemWithRobocopy
         [System.String]
         $DestinationPath
     )
-    $quotedPath = '"{0}"' -f $Path
-    $quotedDestinationPath = '"{0}"' -f $DestinationPath
+
     $robocopyExecutable = Get-Command -Name "Robocopy.exe" -ErrorAction Stop
 
     $robocopyArgumentSilent = '/njh /njs /ndl /nc /ns /nfl'
@@ -2220,8 +1937,8 @@ function Copy-ItemWithRobocopy
         Write-Verbose -Message $script:localizedData.RobocopyNotUsingUnbufferedIo
     }
 
-    $robocopyArgumentList = '{0} {1} {2} {3} {4} {5}' -f $quotedPath,
-                                                         $quotedDestinationPath,
+    $robocopyArgumentList = '{0} {1} {2} {3} {4} {5}' -f $Path,
+                                                         $DestinationPath,
                                                          $robocopyArgumentCopySubDirectoriesIncludingEmpty,
                                                          $robocopyArgumentDeletesDestinationFilesAndDirectoriesNotExistAtSource,
                                                          $robocopyArgumentUseUnbufferedIO,
@@ -2286,10 +2003,10 @@ function Get-TemporaryFolder
 
 <#
     .SYNOPSIS
-        Returns the decimal representation of an IP Addresses.
+        Returns the decimal representation of an IP Addresses
 
     .PARAMETER IPAddress
-        The IP Address to be converted.
+        The IP Address to be converted
 #>
 function ConvertTo-Decimal
 {
@@ -2314,16 +2031,16 @@ function ConvertTo-Decimal
 
 <#
     .SYNOPSIS
-        Determines whether an IP Address is valid for a given network / subnet.
+        Determines whether an IP Address is valid for a given network / subnet
 
     .PARAMETER IPAddress
-        IP Address to be checked.
+        IP Address to be checked
 
     .PARAMETER NetworkID
-        IP Address of the network identifier.
+        IP Address of the network identifier
 
     .PARAMETER SubnetMask
-        Subnet mask of the network to be checked.
+        Subnet mask of the network to be checked
 #>
 function Test-IPAddress
 {
@@ -2354,13 +2071,13 @@ function Test-IPAddress
 
 <#
     .SYNOPSIS
-        Builds service account parameters for setup.
+        Builds service account parameters for setup
 
     .PARAMETER ServiceAccount
-        Credential for the service account.
+        Credential for the service account
 
     .PARAMETER ServiceType
-        Type of service account.
+        Type of service account
 #>
 function Get-ServiceAccountParameters
 {
@@ -2378,29 +2095,46 @@ function Get-ServiceAccountParameters
         $ServiceType
     )
 
-    # Get the service account properties
-    $accountParameters = Get-ServiceAccount -ServiceAccount $ServiceAccount
     $parameters = @{}
 
-    # Assign the service type the account
-    $parameters = @{
-        "$($ServiceType)SVCACCOUNT" = $accountParameters.UserName
-    }
-
-    # Check to see if password is null
-    if (![string]::IsNullOrEmpty($accountParameters.Password))
+    switch -Regex ($ServiceAccount.UserName.ToUpper())
     {
-        # Add the password to the hashtable
-        $parameters.Add("$($ServiceType)SVCPASSWORD", $accountParameters.Password)
-    }
+        '^(?:NT ?AUTHORITY\\)?(SYSTEM|LOCALSERVICE|LOCAL SERVICE|NETWORKSERVICE|NETWORK SERVICE)$'
+        {
+            $parameters = @{
+                "$($ServiceType)SVCACCOUNT" = "NT AUTHORITY\$($Matches[1])"
+            }
+        }
 
+        '^(?:NT SERVICE\\)(.*)$'
+        {
+            $parameters = @{
+                "$($ServiceType)SVCACCOUNT" = "NT SERVICE\$($Matches[1])"
+            }
+        }
+
+        '.*\$'
+        {
+            $parameters = @{
+                "$($ServiceType)SVCACCOUNT" = $ServiceAccount.UserName
+            }
+        }
+
+        default
+        {
+            $parameters = @{
+                "$($ServiceType)SVCACCOUNT" = $ServiceAccount.UserName
+                "$($ServiceType)SVCPASSWORD" = $ServiceAccount.GetNetworkCredential().Password
+            }
+        }
+    }
 
     return $parameters
 }
 
 <#
     .SYNOPSIS
-        Starts the SQL setup process.
+        Starts the SQL setup process-
 
     .PARAMETER FilePath
         String containing the path to setup.exe.
@@ -2440,30 +2174,6 @@ function Start-SqlSetupProcess
     Wait-Process -InputObject $sqlSetupProcess -Timeout $Timeout -ErrorAction Stop
 
     return $sqlSetupProcess.ExitCode
-}
-
-<#
-    .SYNOPSIS
-        Converts the start mode property returned by a Win32_Service CIM object to the resource properties *StartupType equivalent
-
-    .PARAMETER StartMode
-        The StartMode to convert.
-#>
-function ConvertTo-StartupType
-{
-    param
-    (
-        [Parameter()]
-        [System.String]
-        $StartMode
-    )
-
-    If ($StartMode -eq 'Auto')
-    {
-        $StartMode = 'Automatic'
-    }
-
-    return $StartMode
 }
 
 Export-ModuleMember -Function *-TargetResource

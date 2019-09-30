@@ -1,6 +1,6 @@
 @{
   # Version number of this module.
-  moduleVersion = '12.3.0.0'
+  ModuleVersion = '11.0.0.0'
 
   # ID used to uniquely identify this module
   GUID = '693ee082-ed36-45a7-b490-88b07c86b42f'
@@ -50,65 +50,168 @@
 
           # ReleaseNotes of this module
         ReleaseNotes = '- Changes to SqlServerDsc
-  - Reverting the change that was made as part of the
-    [issue 1260](https://github.com/PowerShell/SqlServerDsc/issues/1260)
-    in the previous release, as it only mitigated the issue, it did not
-    solve the issue.
-  - Removed the container testing since that broke the integration tests,
-    possible due to using excessive amount of memory on the AppVeyor build
-    worker. This will make the unit tests to take a bit longer to run
-    ([issue 1260](https://github.com/PowerShell/SqlServerDsc/issues/1260)).
-  - The unit tests and the integration tests are now run in two separate
-    build workers in AppVeyor. One build worker runs the integration tests,
-    while a second build worker runs the unit tests. The build workers runs
-    in parallel on paid accounts, but sequentially on free accounts
-    ([issue 1260](https://github.com/PowerShell/SqlServerDsc/issues/1260)).
-  - Clean up error handling in some of the integration tests that was
-    part of a workaround for a bug in Pester. The bug is resolved, and
-    the error handling is not again built into Pester.
-  - Speeding up the AppVeyor tests by splitting the common tests in a
-    separate build job.
-  - Updated the appveyor.yml to have the correct build step, and also
-    correct run the build step only in one of the jobs.
-  - Update integration tests to use the new integration test template.
-  - Added SqlAgentOperator resource.
-- Changes to SqlServiceAccount
-  - Fixed Get-ServiceObject when searching for Integration Services service.
-    Unlike the rest of SQL Server services, the Integration Services service
-    cannot be instanced, however you can have multiple versions installed.
-    Get-Service object would return the correct service name that you
-    are looking for, but it appends the version number at the end. Added
-    parameter VersionNumber so the search would return the correct
-    service name.
-  - Added code to allow for using Managed Service Accounts.
-  - Now the correct service type string value is returned by the function
-    `Get-TargetResource`. Previously one value was passed in as a parameter
-    (e.g. `DatabaseEngine`), but a different string value as returned
-    (e.g. `SqlServer`). Now `Get-TargetResource` return the same values
-    that can be passed as values in the parameter `ServiceType`
-    ([issue 981](https://github.com/PowerShell/SqlServerDsc/issues/981)).
-- Changes to SqlServerLogin
-  - Fixed issue in Test-TargetResource to valid password on disabled accounts
-    ([issue 915](https://github.com/PowerShell/SqlServerDsc/issues/915)).
-  - Now when adding a login of type SqlLogin, and the SQL Server login mode
-    is set to `"Integrated"`, an error is correctly thrown
-    ([issue 1179](https://github.com/PowerShell/SqlServerDsc/issues/1179)).
-- Changes to SqlSetup
-  - Updated the integration test to stop the named instance while installing
-    the other instances to mitigate
-    [issue 1260](https://github.com/PowerShell/SqlServerDsc/issues/1260).
-  - Add parameters to configure the Tempdb files during the installation of
-    the instance. The new parameters are SqlTempdbFileCount, SqlTempdbFileSize,
-    SqlTempdbFileGrowth, SqlTempdbLogFileSize and SqlTempdbLogFileGrowth
-    ([issue 1167](https://github.com/PowerShell/SqlServerDsc/issues/1167)).
+  - BREAKING CHANGE: Resource SqlRSSecureConnectionLevel was remove
+    ([issue 990](https://github.com/PowerShell/SqlServerDsc/issues/990)).
+    The parameter that was set using that resource has been merged into resource
+    SqlRS as the parameter UseSsl. The UseSsl parameter is of type boolean. This
+    change was made because from SQL Server 2008 R2 this value is made an on/off
+    switch. Read more in the article [ConfigurationSetting Method - SetSecureConnectionLevel](https://docs.microsoft.com/en-us/sql/reporting-services/wmi-provider-library-reference/configurationsetting-method-setsecureconnectionlevel).
+  - Updated so that named parameters are used for New-Object cmdlet. This was
+    done to follow the style guideline.
+  - Updated manifest and license to reflect the new year
+    ([issue 965](https://github.com/PowerShell/SqlServerDsc/issues/965)).
+  - Added a README.md under Tests\Integration to help contributors to write
+    integration tests.
+  - Added "Integration tests" section in the CONTRIBUTING.md.
+  - The complete examples were removed. They were no longer accurate and some
+    referenced resources that no longer exist. Accurate examples can be found
+    in each specific resource example folder. Examples for installing Failover Cluster
+    can be found in the resource examples folders in the xFailOverCluster
+    resource module ([issue 462](https://github.com/PowerShell/SqlServerDsc/issues/462)).
+  - A README.md was created under the Examples folder to be used as reference how
+    to install certain scenarios ([issue 462](https://github.com/PowerShell/SqlServerDsc/issues/462)).
+  - Removed the local specific common test for compiling examples in this repository
+    and instead opted-in for the common test in the "DscResource.Tests" repository
+    ([issue 669](https://github.com/PowerShell/SqlServerDsc/issues/669)).
+  - Added new resource SqlServerDatabaseMail for configuring SQL Server
+    Database Mail ([issue 155](https://github.com/PowerShell/SqlServerDsc/issues/155)).
+  - Updated the helper function Test-SQLDscParameterState to handle the
+    data type UInt16.
+  - Fixed typo in SqlServerDscCommon.Tests.
+  - Updated README.md with known issue section for each resource.
+  - Resources that did not have a description in the README.md now has one.
+  - Resources that missed links to the examples in the README.md now has those
+    links.
+  - Style changes in all examples, removing type [System.Management.Automation.Credential()]
+    from credential parameters ([issue 1003](https://github.com/PowerShell/SqlServerDsc/issues/1003)),
+    and renamed the credential parameter so it is not using abbreviation.
+  - Updated the security token for AppVeyor status badge in README.md. When we
+    renamed the repository the security token was changed
+    ([issue 1012](https://github.com/PowerShell/SqlServerDsc/issues/1012)).
+  - Now the helper function Restart-SqlService, after restarting the SQL Server
+    service, does not return until it can connect to the SQL Server instance, and
+    the instance returns status "Online" ([issue 1008](https://github.com/PowerShell/SqlServerDsc/issues/1008)).
+    If it fails to connect within the timeout period (defaults to 120 seconds) it
+    throws an error.
+  - Fixed typo in comment-base help for helper function Test-AvailabilityReplicaSeedingModeAutomatic.
+  - Style cleanup in helper functions and tests.
+- Changes to SqlAG
+  - Fixed typos in tests.
+  - Style cleanup in code and tests.
+- Changes to SqlAGDatabase
+  - Style cleanup in code and tests.
+- Changes to SqlAGListener
+  - Fixed typo in comment-based help.
+  - Style cleanup in code and tests.
+- Changes to SqlAGReplica
+  - Minor code style cleanup. Removed unused variable and instead piped the cmdlet
+    Join-SqlAvailabilityGroup to Out-Null.
+  - Fixed minor typos in comment-based help.
+  - Fixed minor typos in comment.
+  - Style cleanup in code and tests.
+  - Updated description for parameter Name in README.md and in comment-based help
+    ([issue 1034](https://github.com/PowerShell/SqlServerDsc/issues/1034)).
+- Changes to SqlAlias
+  - Fixed issue where exception was thrown if reg keys did not exist
+    ([issue 949](https://github.com/PowerShell/SqlServerDsc/issues/949)).
+  - Style cleanup in tests.
+- Changes to SqlAlwaysOnService
+  - Refactor integration tests slightly to improve run time performance
+    ([issue 1001](https://github.com/PowerShell/SqlServerDsc/issues/1001)).
+  - Style cleanup in code and tests.
+- Changes to SqlDatabase
+  - Fix minor Script Analyzer warning.
+- Changes to SqlDatabaseDefaultLocation
+  - Refactor integration tests slightly to improve run time performance
+    ([issue 1001](https://github.com/PowerShell/SqlServerDsc/issues/1001)).
+  - Minor style cleanup of code in tests.
+- Changes to SqlDatabaseRole
+  - Style cleanup in tests.
+- Changes to SqlRS
+  - Replaced Get-WmiObject with Get-CimInstance to fix Script Analyzer warnings
+    ([issue 264](https://github.com/PowerShell/SqlServerDsc/issues/264)).
+  - Refactored the resource to use Invoke-CimMethod.
+  - Added parameter UseSsl which when set to $true forces connections to the
+    Reporting Services to use SSL when connecting ([issue 990](https://github.com/PowerShell/SqlServerDsc/issues/990)).
+  - Added complete example for SqlRS (based on the integration tests)
+    ([issue 634](https://github.com/PowerShell/SqlServerDsc/issues/634)).
+  - Refactor integration tests slightly to improve run time performance
+    ([issue 1001](https://github.com/PowerShell/SqlServerDsc/issues/1001)).
+  - Style cleanup in code and tests.
+- Changes to SqlScript
+  - Style cleanup in tests.
+  - Updated examples.
+  - Added integration tests.
+  - Fixed minor typos in comment-based help.
+  - Added new example based on integration test.
+- Changes to SqlServerConfiguration
+  - Fixed minor typos in comment-based help.
+  - Now the verbose message say what option is changing and to what value
+    ([issue 1014](https://github.com/PowerShell/SqlServerDsc/issues/1014)).
+  - Changed the RestartTimeout parameter from type SInt32 to type UInt32.
+  - Added localization ([issue 605](https://github.com/PowerShell/SqlServerDsc/issues/605)).
+  - Style cleanup in code and tests.
 - Changes to SqlServerEndpoint
-  - Add the optional parameter Owner. The default owner remains the login used
-    for the creation of the endpoint
-    ([issue 1251](https://github.com/PowerShell/SqlServerDsc/issues/1251)).
-    [Maxime Daniou (@mdaniou)](https://github.com/mdaniou)
-  - Add integration tests
-    ([issue 744](https://github.com/PowerShell/SqlServerDsc/issues/744)).
-    [Maxime Daniou (@mdaniou)](https://github.com/mdaniou)
+  - Updated README.md with links to the examples
+    ([issue 504](https://github.com/PowerShell/SqlServerDsc/issues/504)).
+  - Style cleanup in tests.
+- Changes to SqlServerLogin
+  - Added integration tests ([issue 748](https://github.com/PowerShell/SqlServerDsc/issues/748)).
+  - Minor code style cleanup.
+  - Removed unused variable and instead piped the helper function Connect-SQL to
+    Out-Null.
+  - Style cleanup in tests.
+- Changes to SqlServerMaxDop
+  - Minor style changes in the helper function Get-SqlDscDynamicMaxDop.
+- Changes to SqlServerMemory
+  - Style cleanup in code and tests.
+- Changes to SqlServerPermission
+  - Fixed minor typos in comment-based help.
+  - Style cleanup in code.
+- Changes to SqlServerReplication
+  - Fixed minor typos in verbose messages.
+  - Style cleanup in tests.
+- Changes to SqlServerNetwork
+  - Added sysadmin account parameter usage to the examples.
+- Changes to SqlServerReplication
+  - Fix Script Analyzer warning ([issue 263](https://github.com/PowerShell/SqlServerDsc/issues/263)).
+- Changes to SqlServerRole
+  - Added localization ([issue 621](https://github.com/PowerShell/SqlServerDsc/issues/621)).
+  - Added integration tests ([issue 756](https://github.com/PowerShell/SqlServerDsc/issues/756)).
+  - Updated example to add two server roles in the same configuration.
+  - Style cleanup in tests.
+- Changes to SqlServiceAccount
+  - Default services are now properly detected
+    ([issue 930](https://github.com/PowerShell/SqlServerDsc/issues/930)).
+  - Made the description of parameter RestartService more descriptive
+    ([issue 960](https://github.com/PowerShell/SqlServerDsc/issues/960)).
+  - Added a read-only parameter ServiceAccountName so that the service account
+    name is correctly returned as a string ([issue 982](https://github.com/PowerShell/SqlServerDsc/issues/982)).
+  - Added integration tests ([issue 980](https://github.com/PowerShell/SqlServerDsc/issues/980)).
+  - The timing issue that the resource returned before SQL Server service was
+    actually restarted has been solved by a change in the helper function
+    Restart-SqlService ([issue 1008](https://github.com/PowerShell/SqlServerDsc/issues/1008)).
+    Now Restart-SqlService waits for the instance to return status "Online" or
+    throws an error saying it failed to connect within the timeout period.
+  - Style cleanup in code and tests.
+- Changes to SqlSetup
+  - Added parameter `ASServerMode` to support installing Analysis Services in
+    Multidimensional mode, Tabular mode and PowerPivot mode
+    ([issue 388](https://github.com/PowerShell/SqlServerDsc/issues/388)).
+  - Added integration tests for testing Analysis Services Multidimensional mode
+    and Tabular mode.
+  - Cleaned up integration tests.
+  - Added integration tests for installing a default instance of Database Engine.
+  - Refactor integration tests slightly to improve run time performance
+    ([issue 1001](https://github.com/PowerShell/SqlServerDsc/issues/1001)).
+  - Added PSSA rule "PSUseDeclaredVarsMoreThanAssignments" override in the
+    function Set-TargetResource for the variable $global:DSCMachineStatus.
+  - Style cleanup in code and tests.
+- Changes to SqlWaitForAG
+  - Style cleanup in code.
+- Changes to SqlWindowsFirewall
+  - Fixed minor typos in comment-based help.
+  - Style cleanup in code.
 
 '
 
@@ -116,14 +219,6 @@
 
   } # End of PrivateData hashtable
   }
-
-
-
-
-
-
-
-
 
 
 

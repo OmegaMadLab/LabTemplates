@@ -72,7 +72,7 @@ function Get-TargetResource
     }
 
     # Connect to the instance
-    $serverObject = Connect-SQL -ServerName $ServerName -InstanceName $InstanceName
+    $serverObject = Connect-SQL -SQLServer $ServerName -SQLInstanceName $InstanceName
 
     # Is this node actively hosting the SQL instance?
     $currentConfiguration.IsActiveNode = Test-ActiveNode -ServerObject $serverObject
@@ -194,7 +194,7 @@ function Set-TargetResource
     Import-SQLPSModule
 
     # Connect to the defined instance
-    $serverObject = Connect-SQL -ServerName $ServerName -InstanceName $InstanceName
+    $serverObject = Connect-SQL -SQLServer $ServerName -SQLInstanceName $InstanceName
 
     # Get the Availability Group
     $availabilityGroup = $serverObject.AvailabilityGroups[$AvailabilityGroupName]
@@ -239,7 +239,7 @@ function Set-TargetResource
 
             foreach ( $availabilityGroupReplica in $secondaryReplicas )
             {
-                $currentAvailabilityGroupReplicaServerObject = Connect-SQL -ServerName $availabilityGroupReplica.Name
+                $currentAvailabilityGroupReplicaServerObject = Connect-SQL -SQLServer $availabilityGroupReplica.Name
                 $impersonatePermissionsStatus.Add(
                     $availabilityGroupReplica.Name,
                     ( Test-ImpersonatePermissions -ServerObject $currentAvailabilityGroupReplicaServerObject )
@@ -679,7 +679,7 @@ function Test-TargetResource
     }
 
     # Connect to the defined instance
-    $serverObject = Connect-SQL -ServerName $ServerName -InstanceName $InstanceName
+    $serverObject = Connect-SQL -SQLServer $ServerName -SQLInstanceName $InstanceName
 
     # Get the Availability Group if it exists
     if ( -not [System.String]::IsNullOrEmpty($currentConfiguration.AvailabilityGroupName) )

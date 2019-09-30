@@ -33,24 +33,31 @@ function Get-TargetResource
         $ProtocolName
     )
 
-    Import-SQLPSModule
+    try
+    {
+        $applicationDomainObject = Register-SqlWmiManagement -SQLInstanceName $InstanceName
 
-    $managedComputerObject = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer
+        $managedComputerObject = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer
 
-    Write-Verbose -Message ($script:localizedData.GetNetworkProtocol -f $ProtocolName, $InstanceName)
-    $tcp = $managedComputerObject.ServerInstances[$InstanceName].ServerProtocols[$ProtocolName]
+        Write-Verbose -Message ($script:localizedData.GetNetworkProtocol -f $ProtocolName, $InstanceName)
+        $tcp = $managedComputerObject.ServerInstances[$InstanceName].ServerProtocols[$ProtocolName]
 
-    Write-Verbose -Message $script:localizedData.ReadingNetworkProperties
-    $returnValue = @{
-        InstanceName   = $InstanceName
-        ProtocolName   = $ProtocolName
-        IsEnabled      = $tcp.IsEnabled
-        TcpDynamicPort = ($tcp.IPAddresses['IPAll'].IPAddressProperties['TcpDynamicPorts'].Value -ge 0)
-        TcpPort        = $tcp.IPAddresses['IPAll'].IPAddressProperties['TcpPort'].Value
+        Write-Verbose -Message $script:localizedData.ReadingNetworkProperties
+        $returnValue = @{
+            InstanceName = $InstanceName
+            ProtocolName    = $ProtocolName
+            IsEnabled       = $tcp.IsEnabled
+            TcpDynamicPort  = ($tcp.IPAddresses['IPAll'].IPAddressProperties['TcpDynamicPorts'].Value -ge 0)
+            TcpPort         = $tcp.IPAddresses['IPAll'].IPAddressProperties['TcpPort'].Value
+        }
+
+        $returnValue.Keys | ForEach-Object {
+            Write-Verbose -Message "$_ = $($returnValue[$_])"
+        }
     }
-
-    $returnValue.Keys | ForEach-Object {
-        Write-Verbose -Message "$_ = $($returnValue[$_])"
+    finally
+    {
+        Unregister-SqlAssemblies -ApplicationDomain $applicationDomainObject
     }
 
     return $returnValue
@@ -138,104 +145,90 @@ function Set-TargetResource
 
     $getTargetResourceResult = Get-TargetResource -InstanceName $InstanceName -ProtocolName $ProtocolName
 
-    $desiredState = @{
-        InstanceName   = $InstanceName
-        ProtocolName   = $ProtocolName
-        IsEnabled      = $IsEnabled
-        TcpDynamicPort = $TcpDynamicPort
-        TcpPort        = $TcpPort
-    }
-
-    $isRestartNeeded = $false
-
-    # Get-TargetResource makes the necessary calls so the type ManagedComputer is available.
-    $managedComputerObject = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer
-
-    Write-Verbose -Message ($script:localizedData.GetNetworkProtocol -f $ProtocolName, $InstanceName)
-    $tcp = $managedComputerObject.ServerInstances[$InstanceName].ServerProtocols[$ProtocolName]
-
-    Write-Verbose -Message ($script:localizedData.CheckingProperty -f 'IsEnabled')
-    if ($desiredState.IsEnabled -ine $getTargetResourceResult.IsEnabled)
+    try
     {
-        Write-Verbose -Message ($script:localizedData.UpdatingProperty -f 'IsEnabled', $getTargetResourceResult.IsEnabled, $desiredState.IsEnabled)
-        $tcp.IsEnabled = $desiredState.IsEnabled
-        $tcp.Alter()
+        $applicationDomainObject = Register-SqlWmiManagement -SQLInstanceName $InstanceName
 
-        $isRestartNeeded = $true
+        $desiredState = @{
+            InstanceName = $InstanceName
+            ProtocolName    = $ProtocolName
+            IsEnabled       = $IsEnabled
+            TcpDynamicPort  = $TcpDynamicPort
+            TcpPort         = $TcpPort
+        }
+
+        $isRestartNeeded = $false
+
+        $managedComputerObject = New-Object -TypeName Microsoft.SqlServer.Management.Smo.Wmi.ManagedComputer
+
+        Write-Verbose -Message ($script:localizedData.GetNetworkProtocol -f $ProtocolName, $InstanceName)
+        $tcp = $managedComputerObject.ServerInstances[$InstanceName].ServerProtocols[$ProtocolName]
+
+        Write-Verbose -Message ($script:localizedData.CheckingProperty -f 'IsEnabled')
+        if ($desiredState.IsEnabled -ine $getTargetResourceResult.IsEnabled)
+        {
+            Write-Verbose -Message ($script:localizedData.UpdatingProperty -f 'IsEnabled', $getTargetResourceResult.IsEnabled, $desiredState.IsEnabled)
+            $tcp.IsEnabled = $desiredState.IsEnabled
+            $tcp.Alter()
+
+            $isRestartNeeded = $true
+        }
+
+        Write-Verbose -Message ($script:localizedData.CheckingProperty -f 'TcpDynamicPort')
+        if ($desiredState.TcpDynamicPort -ne $getTargetResourceResult.TcpDynamicPort)
+        {
+            # Translates the current and desired state to a string for display
+            $dynamicPortDisplayValueTable = @{
+                $true = 'enabled'
+                $false = 'disabled'
+            }
+
+            # Translates the desired state to a valid value
+            $desiredDynamicPortValue = @{
+                $true = '0'
+                $false = ''
+            }
+
+            $fromTcpDynamicPortDisplayValue = $dynamicPortDisplayValueTable[$getTargetResourceResult.TcpDynamicPort]
+            $toTcpDynamicPortDisplayValue = $dynamicPortDisplayValueTable[$desiredState.TcpDynamicPort]
+
+            Write-Verbose -Message ($script:localizedData.UpdatingProperty -f 'TcpDynamicPorts', $fromTcpDynamicPortDisplayValue, $toTcpDynamicPortDisplayValue)
+            $tcp.IPAddresses['IPAll'].IPAddressProperties['TcpDynamicPorts'].Value = $desiredDynamicPortValue[$desiredState.TcpDynamicPort]
+            $tcp.Alter()
+
+            $isRestartNeeded = $true
+        }
+
+        Write-Verbose -Message ($script:localizedData.CheckingProperty -f 'TcpPort')
+        if ($desiredState.TcpPort -ine $getTargetResourceResult.TcpPort)
+        {
+            $fromTcpPort = $getTargetResourceResult.TcpPort
+            if ($fromTcpPort -eq '')
+            {
+                $fromTcpPort = 'none'
+            }
+
+            $toTcpPort = $desiredState.TcpPort
+            if ($toTcpPort -eq '')
+            {
+                $toTcpPort = 'none'
+            }
+
+            Write-Verbose -Message ($script:localizedData.UpdatingProperty -f 'TcpPort', $fromTcpPort, $toTcpPort)
+            $tcp.IPAddresses['IPAll'].IPAddressProperties['TcpPort'].Value = $desiredState.TcpPort
+            $tcp.Alter()
+
+            $isRestartNeeded = $true
+        }
+
+        if ($RestartService -and $isRestartNeeded)
+        {
+            Restart-SqlService -SQLServer $ServerName -SQLInstanceName $InstanceName -Timeout $RestartTimeout
+        }
     }
-
-    Write-Verbose -Message ($script:localizedData.CheckingProperty -f 'TcpDynamicPort')
-    if ($desiredState.TcpDynamicPort -ne $getTargetResourceResult.TcpDynamicPort)
+    finally
     {
-        # Translates the current and desired state to a string for display
-        $dynamicPortDisplayValueTable = @{
-            $true  = 'enabled'
-            $false = 'disabled'
-        }
-
-        # Translates the desired state to a valid value
-        $desiredDynamicPortValue = @{
-            $true  = '0'
-            $false = ''
-        }
-
-        $fromTcpDynamicPortDisplayValue = $dynamicPortDisplayValueTable[$getTargetResourceResult.TcpDynamicPort]
-        $toTcpDynamicPortDisplayValue = $dynamicPortDisplayValueTable[$desiredState.TcpDynamicPort]
-
-        Write-Verbose -Message ($script:localizedData.UpdatingProperty -f 'TcpDynamicPorts', $fromTcpDynamicPortDisplayValue, $toTcpDynamicPortDisplayValue)
-        $tcp.IPAddresses['IPAll'].IPAddressProperties['TcpDynamicPorts'].Value = $desiredDynamicPortValue[$desiredState.TcpDynamicPort]
-        $tcp.Alter()
-
-        $isRestartNeeded = $true
-    }
-
-    Write-Verbose -Message ($script:localizedData.CheckingProperty -f 'TcpPort')
-    if ($desiredState.TcpPort -ine $getTargetResourceResult.TcpPort)
-    {
-        $fromTcpPort = $getTargetResourceResult.TcpPort
-        if ($fromTcpPort -eq '')
-        {
-            $fromTcpPort = 'none'
-        }
-
-        $toTcpPort = $desiredState.TcpPort
-        if ($toTcpPort -eq '')
-        {
-            $toTcpPort = 'none'
-        }
-
-        Write-Verbose -Message ($script:localizedData.UpdatingProperty -f 'TcpPort', $fromTcpPort, $toTcpPort)
-        $tcp.IPAddresses['IPAll'].IPAddressProperties['TcpPort'].Value = $desiredState.TcpPort
-        $tcp.Alter()
-
-        $isRestartNeeded = $true
-    }
-
-    if ($RestartService -and $isRestartNeeded)
-    {
-        $restartSqlServiceParameters = @{
-            SQLServer       = $ServerName
-            SQLInstanceName = $InstanceName
-            Timeout         = $RestartTimeout
-        }
-
-        if ($getTargetResourceResult.IsEnabled -eq $false -and $IsEnabled -eq $true)
-        {
-            <#
-                If the protocol was disabled and now being enabled, is not possible
-                to connect to the instance to evaluate if it is a clustered instance.
-                This is being tracked in issue #1174.
-            #>
-            $restartSqlServiceParameters['SkipClusterCheck'] = $true
-        }
-
-        if ($PSBoundParameters.ContainsKey('IsEnabled') -and $IsEnabled -eq $false)
-        {
-            # If the protocol is disabled it is not possible to connect to the instance.
-            $restartSqlServiceParameters['SkipWaitForOnline'] = $true
-        }
-
-        Restart-SqlService @restartSqlServiceParameters
+        Unregister-SqlAssemblies -ApplicationDomain $applicationDomainObject
     }
 }
 

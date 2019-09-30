@@ -38,14 +38,14 @@ function Get-TargetResource
         [System.String]
         $ServerName = $env:COMPUTERNAME,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter()]
         [ValidateNotNullOrEmpty()]
         [System.String]
-        $InstanceName
+        $InstanceName = 'MSSQLSERVER'
     )
 
     Write-Verbose -Message "Getting owner of database $Database"
-    $sqlServerObject = Connect-SQL -ServerName $ServerName -InstanceName $InstanceName
+    $sqlServerObject = Connect-SQL -SQLServer $ServerName -SQLInstanceName $InstanceName
 
     if ($sqlServerObject)
     {
@@ -116,14 +116,14 @@ function Set-TargetResource
         [System.String]
         $ServerName = $env:COMPUTERNAME,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter()]
         [ValidateNotNullOrEmpty()]
         [System.String]
-        $InstanceName
+        $InstanceName = 'MSSQLSERVER'
     )
 
     Write-Verbose -Message "Setting owner $Name of database $Database"
-    $sqlServerObject = Connect-SQL -ServerName $ServerName -InstanceName $InstanceName
+    $sqlServerObject = Connect-SQL -SQLServer $ServerName -SQLInstanceName $InstanceName
 
     if ($sqlServerObject)
     {
@@ -191,10 +191,10 @@ function Test-TargetResource
         [System.String]
         $ServerName = $env:COMPUTERNAME,
 
-        [Parameter(Mandatory = $true)]
+        [Parameter()]
         [ValidateNotNullOrEmpty()]
         [System.String]
-        $InstanceName
+        $InstanceName = 'MSSQLSERVER'
     )
 
     Write-Verbose -Message "Testing owner $Name of database $Database"

@@ -35,7 +35,7 @@ function Get-TargetResource
     )
 
     # Connect to the instance
-    $serverObject = Connect-SQL -ServerName $ServerName -InstanceName $InstanceName
+    $serverObject = Connect-SQL -SQLServer $ServerName -SQLInstanceName $InstanceName
 
     # Define current version for check compatibility
     $sqlMajorVersion = $serverObject.Version.Major
@@ -232,8 +232,10 @@ function Set-TargetResource
         $ProcessOnlyOnActiveNode
     )
 
+    Import-SQLPSModule
+
     # Connect to the instance
-    $serverObject = Connect-SQL -ServerName $ServerName -InstanceName $InstanceName
+    $serverObject = Connect-SQL -SQLServer $ServerName -SQLInstanceName $InstanceName
 
     # Determine if HADR is enabled on the instance. If not, throw an error
     if ( -not $serverObject.IsHadrEnabled )

@@ -40,10 +40,9 @@ function Get-TargetResource
         EndpointName = ''
         Port         = ''
         IpAddress    = ''
-        Owner        = ''
     }
 
-    $sqlServerObject = Connect-SQL -ServerName $ServerName -InstanceName $InstanceName
+    $sqlServerObject = Connect-SQL -SQLServer $ServerName -SQLInstanceName $InstanceName
     if ($sqlServerObject)
     {
         Write-Verbose -Message ('Connected to {0}\{1}' -f $ServerName, $InstanceName)
@@ -62,7 +61,6 @@ function Get-TargetResource
             $getTargetResourceReturnValues.EndpointName = $endpointObject.Name
             $getTargetResourceReturnValues.Port = $endpointObject.Protocol.Tcp.ListenerPort
             $getTargetResourceReturnValues.IpAddress = $endpointObject.Protocol.Tcp.ListenerIPAddress
-            $getTargetResourceReturnValues.Owner = $endpointObject.Owner
         }
         else
         {
@@ -70,7 +68,6 @@ function Get-TargetResource
             $getTargetResourceReturnValues.EndpointName = ''
             $getTargetResourceReturnValues.Port = ''
             $getTargetResourceReturnValues.IpAddress = ''
-            $getTargetResourceReturnValues.Owner = ''
         }
     }
     else
@@ -104,9 +101,6 @@ function Get-TargetResource
 
     .PARAMETER IpAddress
         The network IP address the endpoint is listening on. Defaults to '0.0.0.0' which means listen on any valid IP address.
-
-    .PARAMETER Owner
-        The owner of the endpoint. Default is the login used for the creation.
 #>
 function Set-TargetResource
 {
@@ -136,16 +130,12 @@ function Set-TargetResource
 
         [Parameter()]
         [System.String]
-        $IpAddress = '0.0.0.0',
-
-        [Parameter()]
-        [System.String]
-        $Owner
+        $IpAddress = '0.0.0.0'
     )
 
     $getTargetResourceResult = Get-TargetResource -EndpointName $EndpointName -ServerName $ServerName -InstanceName $InstanceName
 
-    $sqlServerObject = Connect-SQL -ServerName $ServerName -InstanceName $InstanceName
+    $sqlServerObject = Connect-SQL -SQLServer $ServerName -SQLInstanceName $InstanceName
     if ($sqlServerObject)
     {
         if ($Ensure -eq 'Present' -and $getTargetResourceResult.Ensure -eq 'Absent')
@@ -157,12 +147,6 @@ function Set-TargetResource
             $endpointObject.ProtocolType = [Microsoft.SqlServer.Management.Smo.ProtocolType]::Tcp
             $endpointObject.Protocol.Tcp.ListenerPort = $Port
             $endpointObject.Protocol.Tcp.ListenerIPAddress = $IpAddress
-
-            if ($PSBoundParameters.ContainsKey('Owner'))
-            {
-                $endpointObject.Owner = $Owner
-            }
-
             $endpointObject.Payload.DatabaseMirroring.ServerMirroringRole = [Microsoft.SqlServer.Management.Smo.ServerMirroringRole]::All
             $endpointObject.Payload.DatabaseMirroring.EndpointEncryption = [Microsoft.SqlServer.Management.Smo.EndpointEncryption]::Required
             $endpointObject.Payload.DatabaseMirroring.EndpointEncryptionAlgorithm = [Microsoft.SqlServer.Management.Smo.EndpointEncryptionAlgorithm]::Aes
@@ -186,13 +170,6 @@ function Set-TargetResource
                 {
                     Write-Verbose -Message ('Updating endpoint {0} port to {1}.' -f $EndpointName, $Port)
                     $endpointObject.Protocol.Tcp.ListenerPort = $Port
-                    $endpointObject.Alter()
-                }
-
-                if ($endpointObject.Owner -ne $Owner)
-                {
-                    Write-Verbose -Message ('Updating endpoint {0} Owner to {1}.' -f $EndpointName, $Owner)
-                    $endpointObject.Owner = $Owner
                     $endpointObject.Alter()
                 }
             }
@@ -245,9 +222,6 @@ function Set-TargetResource
 
     .PARAMETER IpAddress
         The network IP address the endpoint is listening on. Defaults to '0.0.0.0' which means listen on any valid IP address.
-
-    .PARAMETER Owner
-        The owner of the endpoint. Default is the login used for the creation.
 #>
 function Test-TargetResource
 {
@@ -278,11 +252,7 @@ function Test-TargetResource
 
         [Parameter()]
         [System.String]
-        $IpAddress = '0.0.0.0',
-
-        [Parameter()]
-        [System.String]
-        $Owner
+        $IpAddress = '0.0.0.0'
     )
 
     $getTargetResourceResult = Get-TargetResource -EndpointName $EndpointName -ServerName $ServerName -InstanceName $InstanceName
@@ -292,15 +262,9 @@ function Test-TargetResource
 
         if ($getTargetResourceResult.Ensure -eq 'Present' `
                 -and (
-                        $getTargetResourceResult.Port -ne $Port `
+                $getTargetResourceResult.Port -ne $Port `
                     -or $getTargetResourceResult.IpAddress -ne $IpAddress
-                )
-        )
-        {
-            $result = $false
-        }
-        elseif ($getTargetResourceResult.Ensure -eq 'Present' -and $Owner `
-                -and $getTargetResourceResult.Owner -ne $Owner
+            )
         )
         {
             $result = $false
