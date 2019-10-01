@@ -18,7 +18,7 @@ configuration ADDomainJoin
         [Int]$RetryIntervalSec=30
     )
 
-    Import-DscResource -ModuleName xComputerManagement, xActiveDirectory, PSDesiredStateConfiguration, SqlServerDsc
+    Import-DscResource -ModuleName xComputerManagement, xActiveDirectory, PSDesiredStateConfiguration, SqlServerDsc, xNetworking
     [System.Management.Automation.PSCredential]$SqlAdministratorCredential = New-Object System.Management.Automation.PSCredential ("$env:COMPUTERNAME\$($Admincreds.UserName)", $Admincreds.Password)
     [System.Management.Automation.PSCredential]$DomainCreds = New-Object System.Management.Automation.PSCredential ("${DomainNetbiosName}\$($Admincreds.UserName)", $Admincreds.Password)
 
@@ -74,6 +74,18 @@ configuration ADDomainJoin
             InstanceName         = 'MSSQLSERVER'
             PsDscRunAsCredential = $SqlAdministratorCredential
             DependsOn = "[SqlServerLogin]Add_WindowsUser"
+        }
+
+        xFirewall SqlPort
+        {
+            Name        = 'SQLServer'
+            DisplayName = 'SQL Server TCP 1433'
+            Action      = 'Allow'
+            Direction   = 'Inbound'
+            LocalPort   = '1433'
+            Protocol    = 'TCP'
+            Profile     = 'Any'
+            Enabled     = 'True'
         }
 
         LocalConfigurationManager 
