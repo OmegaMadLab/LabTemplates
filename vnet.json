@@ -1,65 +1,65 @@
 {
-  "schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
-  "contentVersion": "1.0.0.0",
-  "parameters": {
-      "vnetName": {
-         "type": "string",
-         "metadata": {
-              "description": "Vnet name"
-          },
-         "defaultValue": "vnet"
-      },
-      "addressPrefix": {
-         "type": "string",
-         "metadata": {
-              "description": "Vnet address space"
-          },
-         "defaultValue": "10.0.0.0/16"
-      },
-      "subnetName": {
-         "type": "string",
-         "metadata": {
-              "description": "Subnet name"
-          },
-          "defaultValue": "defaultSubnet"
-      },
-      "subnetPrefix": {
-         "type": "string",
-         "metadata": {
-              "description": "Subnet address space"
-          },
-          "defaultValue": "10.0.0.0/24"
-      }
-   },
-  "variables": { },
-  "resources": [ 
-      {
-          "apiVersion": "2015-06-15",
-          "type": "Microsoft.Network/virtualNetworks",
-          "name": "[parameters('vnetName')]",
-          "location": "[resourceGroup().location]",
-          "tags": {},
-          "properties": {
-              "addressSpace": {
-                  "addressPrefixes": [
-                      "[parameters('addressPrefix')]"
-                  ]
-              },
-              "subnets": [
-                  {
-                      "name": "[parameters('subnetName')]",
-                      "properties": {
-                          "addressPrefix": "[parameters('subnetPrefix')]"
-                      }
-                  }
-              ]
-          }
-      }
-  ],
-  "outputs": {
-      "subnetId": {
-         "type": "string",
-         "value": "[concat(resourceId(ResourceGroup().Name, 'Microsoft.Network/virtualNetworks', parameters('vnetName')), '/subnets/', parameters('subnetName'))]"
-      }
-   }
+    "$schema": "https://schema.management.azure.com/schemas/2015-01-01/deploymentTemplate.json#",
+    "contentVersion": "1.0.0.0",
+    "parameters": {
+        "vnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "Vnet name"
+            },
+            "defaultValue": "vnet"
+        },
+        "addressPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Vnet address space"
+            },
+            "defaultValue": "10.0.0.0/16"
+        },
+        "subnetName": {
+            "type": "string",
+            "metadata": {
+                "description": "Subnet name"
+            },
+            "defaultValue": "defaultSubnet"
+        },
+        "subnetPrefix": {
+            "type": "string",
+            "metadata": {
+                "description": "Subnet address space"
+            },
+            "defaultValue": "10.0.0.0/24"
+        }
+    },
+    "variables": { },
+    "resources": [ 
+        {
+            "apiVersion": "2015-06-15",
+            "type": "Microsoft.Network/virtualNetworks",
+            "name": "[parameters('vnetName')]",
+            "location": "[resourceGroup().location]",
+            "tags": {},
+            "properties": {
+                "addressSpace": {
+                    "addressPrefixes": [
+                        "[parameters('addressPrefix')]"
+                    ]
+                },
+                "subnets": [
+                    {
+                        "name": "[parameters('subnetName')]",
+                        "properties": {
+                            "addressPrefix": "[parameters('subnetPrefix')]"
+                        }
+                    }
+                ]
+            }
+        }
+    ],
+    "outputs": {
+        "subnetId": {
+            "type": "string",
+            "value": "[concat(resourceId(ResourceGroup().Name, 'Microsoft.Network/virtualNetworks', parameters('vnetName')), '/subnets/', parameters('subnetName'))]"
+        }
+    }
 }
