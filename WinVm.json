@@ -33,44 +33,22 @@
                 "description": "Local and domain admin password"
             }
         },
-        "domainName": {
+        "subnetId": {
             "type": "string",
-            "metadata": {
-                "description": "AD domain name"
-            }
-        },
-        "vnetName": {
-            "type": "string",
-            "metadata": {
-                "description": "Name of an existing vnet"
-            }
-        },
-        "subnetName": {
-            "type": "string",
-            "defaultValue": "default",
             "metadata": {
                 "description": "Name of an existing subnet"
-            }
-        },
-        "vnetResourceGroup": {
-            "type": "string",
-            "defaultValue": "[resourceGroup().name]",
-            "metadata": {
-                "description": "Name of the resource group which contains the existing vnet"
             }
         }
     },
     "variables": {
         "diagStorageName": "[take(concat(toLower(parameters('envPrefix')),'diagsa',uniqueString(resourceGroup().id)),24)]",
-        "vmName": "[concat(parameters('envPrefix'),'-',parameters('vmName'))]",
-        "adJoinModulesURL": "https://raw.githubusercontent.com/OmegaMadLab/LabTemplates/master/DSCResources/ADDomainJoin-SQL.ps1.zip",
-        "adJoinConfigurationFunction": "ADDomainJoin-SQL.ps1\\ADDomainJoin"
+        "vmName": "[concat(parameters('envPrefix'),'-',parameters('vmName'))]"
     },
     "resources": [
         {
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('vmName')]",
-            "apiVersion": "2019-09-16",
+            "apiVersion": "2018-06-01",
             "location": "[resourceGroup().location]",
             "properties": {
         
@@ -79,9 +57,9 @@
                 },
                 "storageProfile": {
                     "imageReference": {
-                        "publisher": "MicrosoftSqlServer",
-                        "offer": "SQL2017-WS2016",
-                        "sku": "SQLDEV",
+                        "publisher": "MicrosoftWindowsServer",
+                        "offer": "WindowsServer",
+                        "sku": "2016-Datacenter-smalldisk",
                         "version": "latest"
                     },
                     "osDisk": {
@@ -92,7 +70,7 @@
                         "managedDisk": {
                             "storageAccountType": "StandardSSD_LRS"
                         },
-                        "diskSizeGB": 127
+                        "diskSizeGB": 64
                     },
                     "dataDisks": []
                 },
@@ -121,38 +99,6 @@
                 }
             },
             "resources": [
-                {
-                    "type": "extensions",
-                    "name": "DomainJoin",
-                    "apiVersion": "2017-12-01",
-                    "location": "[resourceGroup().location]",
-                    "dependsOn": [
-                        "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]"
-                    ],
-                    "properties": {
-                
-                        "publisher": "Microsoft.Powershell",
-                        "type": "DSC",
-                        "typeHandlerVersion": "2.76",
-                        "autoUpgradeMinorVersion": false,
-                        "settings": {
-                            "modulesURL": "[variables('adJoinModulesURL')]",
-                            "configurationFunction": "[variables('adJoinConfigurationFunction')]",
-                            "properties": {
-                                "domainName": "[parameters('domainName')]",
-                                "adminCreds": {
-                                    "userName": "[parameters('adminUserName')]",
-                                    "password": "PrivateSettingsRef:adminPassword"
-                                }
-                            }
-                        },
-                        "protectedSettings": {
-                            "items": {
-                                "adminPassword": "[parameters('adminPassword')]"
-                            }
-                        }
-                    }
-                }
             ],
             "dependsOn": [
                 "[resourceId('Microsoft.Network/networkInterfaces', concat(variables('vmName'),'-NIC'))]",
@@ -172,7 +118,7 @@
                         "properties": {
                             "privateIPAllocationMethod": "Dynamic",
                             "subnet": {
-                                "id": "[concat(resourceId(parameters('vnetResourceGroup'), 'Microsoft.Network/virtualNetworks', parameters('vnetName')), '/subnets/', parameters('subnetName'))]"
+                                "id": "[parameters('subnetId')]"
                             },
                             "publicIPAddress": {
                                 "id": "[resourceId('Microsoft.Network/publicIPAddresses', concat(variables('vmName'),'-PIP'))]"
