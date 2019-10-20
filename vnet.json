@@ -38,9 +38,7 @@
           "type": "Microsoft.Network/virtualNetworks",
           "name": "[parameters('vnetName')]",
           "location": "[resourceGroup().location]",
-          "tags": {
-              "displayName": "[]"
-          },
+          "tags": {},
           "properties": {
               "addressSpace": {
                   "addressPrefixes": [
