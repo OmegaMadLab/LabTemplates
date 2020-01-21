@@ -2,6 +2,13 @@
     "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentTemplate.json#",
     "contentVersion": "1.0.0.0",
     "parameters": {
+        "location": {
+           "type": "string",
+           "metadata": {
+                "description": "location of the AD DC"
+            },
+            "defaultValue": "[resourceGroup().location]"
+        },
         "envPrefix": {
             "type": "string",
             "metadata": {      
@@ -71,7 +78,7 @@
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('vmName')]",
             "apiVersion": "2019-03-01",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('location')]",
             "properties": {
         
                 "hardwareProfile": {
@@ -81,7 +88,7 @@
                     "imageReference": {
                         "publisher": "MicrosoftWindowsServer",
                         "offer": "WindowsServer",
-                        "sku": "2016-Datacenter-smalldisk",
+                        "sku": "2016-Datacenter",
                         "version": "latest"
                     },
                     "osDisk": {
@@ -92,7 +99,7 @@
                         "managedDisk": {
                             "storageAccountType": "StandardSSD_LRS"
                         },
-                        "diskSizeGB": 64
+                        "diskSizeGB": 127
                     },
                     "dataDisks": []
                 },
@@ -125,7 +132,7 @@
                     "type": "extensions",
                     "name": "CreateADDC",
                     "apiVersion": "2017-12-01",
-                    "location": "[resourceGroup().location]",
+                    "location": "[parameters('location')]",
                     "dependsOn": [
                         "[resourceId('Microsoft.Compute/virtualMachines', variables('vmName'))]"
                     ],
@@ -163,9 +170,8 @@
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[concat(variables('vmName'),'-NIC')]",
             "apiVersion": "2017-03-01",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('location')]",
             "properties": {
-        
                 "ipConfigurations": [
                     {
                         "name": "ipconfig1",
@@ -193,7 +199,7 @@
             "type": "Microsoft.Network/publicIPAddresses",
             "name": "[concat(variables('vmName'),'-PIP')]",
             "apiVersion": "2017-03-01",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('location')]",
             "properties": {
                 "publicIPAllocationMethod": "Dynamic",
                 "idleTimeoutInMinutes": 4
@@ -209,7 +215,7 @@
             "kind": "Storage",
             "name": "[variables('diagStorageName')]",
             "apiVersion": "2016-01-01",
-            "location": "[resourceGroup().location]",
+            "location": "[parameters('location')]",
             "tags": {},
             "properties": {},
             "dependsOn": []
