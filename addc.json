@@ -214,5 +214,11 @@
             "properties": {},
             "dependsOn": []
         }
-    ]
+    ],
+    "outputs":{
+        "dcPrivateIp": {
+           "type": "string",
+           "value": "[reference(concat(variables('vmName'),'-NIC')).ipConfigurations.ipconfig1.privateIpAddress]"
+        }
+    }
 }
