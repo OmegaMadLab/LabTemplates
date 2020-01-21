@@ -169,7 +169,7 @@
         {
             "type": "Microsoft.Network/networkInterfaces",
             "name": "[concat(variables('vmName'),'-NIC')]",
-            "apiVersion": "2017-03-01",
+            "apiVersion": "2019-09-01",
             "location": "[parameters('location')]",
             "properties": {
                 "ipConfigurations": [
@@ -224,7 +224,7 @@
     "outputs":{
         "dcPrivateIp": {
            "type": "string",
-           "value": "[reference(concat(variables('vmName'),'-NIC')).ipConfigurations[0].properties.privateIpAddress]"
+           "value": "[reference(concat(variables('vmName'),'-NIC')).ipConfigurations[0].properties.privateIPAddress]"
         }
     }
 }
