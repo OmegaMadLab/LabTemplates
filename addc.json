@@ -15,6 +15,24 @@
                 "description": "Prefix used in naming convention for items"
             }
         },
+        "createAvailabilitySet": {
+            "type": "string",
+            "defaultValue": "Yes",
+            "allowedValues": [
+                "Yes",
+                "No"
+            ],
+            "metadata": {
+                "description": "Choose Yes to create a new availability set, or No to use an existing one"
+            }
+        },
+        "availabilitySetName": {
+            "type": "string",
+            "defaultValue": "dcAvSet",
+            "metadata": {
+                "description": "Name of the availability set. Leave empty if availability set is not needed"
+            }
+        },
         "vmName": {
             "type": "string",
             "metadata": {      
@@ -65,15 +83,49 @@
             "metadata": {
                 "description": "Name of the resource group which contains the existing vnet"
             }
+        },
+        "_artifactsLocation": {
+            "type": "string",
+            "metadata": {
+                "description": "Location of resources that the script is dependent on such as linked templates and DSC modules"
+            },
+            "defaultValue": "https://raw.githubusercontent.com/OmegaMadLab/LabTemplates/master"
         }
     },
     "variables": {
+        "NestedTemplateFolder": "nestedtemplates",
+        "AvSetTemplateFileName": "AvSet.json",
         "diagStorageName": "[take(concat(toLower(parameters('envPrefix')),'diagsa',uniqueString(resourceGroup().id)),24)]",
         "vmName": "[concat(parameters('envPrefix'),'-',parameters('vmName'))]",
         "adJoinModulesURL": "https://raw.githubusercontent.com/OmegaMadLab/LabTemplates/master/DSCResources/CreateADDC.ps1.zip",
         "adJoinConfigurationFunction": "CreateADDC.ps1\\CreateADDC"
     },
     "resources": [
+        {
+            "name": "AvSet",
+            "type": "Microsoft.Resources/deployments",
+            "apiVersion": "2017-05-10",
+            "condition": "[and(greater(length(parameters('availabilitySetName')), 0),equals(toLower(parameters('createAvailabilitySet')), 'yes'))]",
+            "dependsOn": [],
+            "properties": {
+                "mode": "Incremental",
+                "templateLink": {
+                "uri": "[concat(parameters('_artifactsLocation'), '/', variables('NestedTemplateFolder'), '/', variables('AvSetTemplateFileName'))]",
+                "contentVersion": "1.0.0.0"
+                },
+                "parameters": {
+                "location": {
+                    "value": "[parameters('location')]"
+                },
+                "avSetName": {
+                    "value": "[parameters('availabilitySetName')]"
+                },
+                "ppgId": {
+                    "value": ""
+                }
+                }
+            }
+        },
         {
             "type": "Microsoft.Compute/virtualMachines",
             "name": "[variables('vmName')]",
